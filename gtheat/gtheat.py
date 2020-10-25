@@ -9,6 +9,8 @@ from GT3.utilities.PlotBase import MARKERSIZE
 
 e_d = constants.elementary_charge
 m_d = constants.deuteron_mass
+m_e = constants.electron_mass
+mu_0 = constants.mu_0
 
 class chi_i(PlotBase):
 
@@ -35,13 +37,20 @@ class chi_i(PlotBase):
         self.gyro_rad_ion = 1.5E-4 * np.sqrt(self.T.i.ev)/self.Bt
         self.gyro_rad_pol = self.gyro_rad_ion * (self.Bp / self.Bt)
         self.a = self.shot.core.a
+        self.nu_ie = self.shot.rtrans.nu_c_j_e
+        self.nu_ei = self.shot.rtrans.nu_c_e_j
+        self.nu_ee = self.shot.rtrans.nu_c_e_e
+        self.cs = np.sqrt(self.T.e.J/m_d)
 
         """Do all calculations"""
         self.itg_crit = self._get_itg_crit()
         self.neo_chi = self.calc_neo_ch()
+        self.gyro_bohm = self.calc_gyro_bohm()
         self.chi_itg_TS_32 = self.calc_itg_TS_32()
         self.chi_itg_TS_12 = self.calc_itg_TS_12()
         self.chi_itg_simp = self.calc_itg_simp()
+        self.chi_DA = self.calc_DA_chi()
+
 
     def calc_neo_ch(self):
 
@@ -92,6 +101,13 @@ class chi_i(PlotBase):
         return Ci * q ** 2 * (Te / (e_d * B)) * (ps / LTi) * (R / LTi) **.5*\
                np.heaviside((R / LTi) - self.itg_crit, 0)
 
+    def calc_gyro_bohm(self):
+
+        cs = self.cs
+        Lpi = self.L.p.i
+        ion_r = self.gyro_rad_ion
+        return ion_r**2 * cs / Lpi
+
 
     def _get_itg_crit(self):
 
@@ -101,11 +117,32 @@ class chi_i(PlotBase):
         max_2 = (1. + 1. / tau) * (1.33 + self.dqdr * 1.91 * self.rho * self.a / (self.q**2)) * (1 - 1.15 * self.epsilon)
         return np.maximum(max_1, max_2)
 
-    def plot_neo_ch(self, edge=True):
-        return self._plot_base(self.neo_chi, yLabel="$\chi^{neo}_{r,i}$", edge=edge)
+    def calc_DA_chi(self):
+        """
+        Calculates Chi from Drift Alfven modes based on gyro-Bohm thermal conductivity
+        (see Eq. 11.78 in Stacey).
+        :return: Drift Alfven chi
+        """
+        q = self.q
+        R = self.R
+        B = self.Bt
+        Lpi = self.L.p.i
+        ne = self.n.e
+        Te = self.T.e.J
+        Ti = self.T.i.J
+        lambda_e = self.vth / self.nu_ei
+        nu_n = (m_d/ m_e)**.25 * ((q * R * Lpi)**.5/lambda_e)
+        beta = 2. * mu_0 * ne * Te / B**2
+        beta_n = (m_d / m_e)**.5 * (q * R / Lpi) * beta
+        k_parallel = 1. / (q * R)
+        mu = -1. * k_parallel * Lpi * np.sqrt((m_d * Te)/(m_e * Ti))
 
-    def plot_itg_chi_simp(self, edge=True):
-        return self._plot_base(self.chi_itg_simp, yLabel=r"$\chi^{itg}_{r,i}$", edge=edge)
+        chi_perp_db = (((1 + beta_n**2)**(-3) + nu_n**2) / (1 + beta_n**2 + nu_n**(4./3.)))**.5
+        chi_gb = self.calc_gyro_bohm()
+
+        return chi_gb * chi_perp_db / np.sqrt(abs(mu))
+
+
 
     def _neo_ch_get_a(self, n, nuij, q, R, eps, vthD):
         """
@@ -135,15 +172,57 @@ class chi_i(PlotBase):
 
         return g1, g2
 
-    def plot_T(self, edge=True):
-        fig = self._plot_base(self.T.i, yLabel=r"$T_{i,e}[eV]$", edge=edge)
-        fig.scatter(self.rho, self.T.e, s=MARKERSIZE)
+    def plot_chi_bohm(self, edge=True):
+        return self._plot_base(self.gyro_bohm, yLabel="$\chi^{GB}_{r,i}$", edge=edge)
+
+    def plot_DA_chi(self, edge=True):
+        return self._plot_base(self.chi_DA, yLabel="$\chi^{DA}_{r,i}$", edge=edge)
+
+    def plot_neo_ch(self, edge=True):
+        return self._plot_base(self.neo_chi, yLabel="$\chi^{neo}_{r,i}$", edge=edge)
+
+    def plot_itg_chi_simp(self, edge=True):
+        return self._plot_base(self.chi_itg_simp, yLabel=r"$\chi^{itg}_{r,i}$", edge=edge)
+
+    def plot_L_T(self, edge=True):
+        fig = self._plot_base(self.L.T.i, yLabel=r"$\L_{T}[m]$", edge=edge)
+        fig.scatter(self.rho, self.L.T.e, s=MARKERSIZE)
+        fig.legend([r"$L_{T,i}$", r"$L_{T,e}$"])
+        return fig
+
+    def plot_L_n(self, edge=True):
+        fig = self._plot_base(self.L.n.i, yLabel=r"$\L_{n}[m]$", edge=edge)
+        fig.scatter(self.rho, self.L.n.e, s=MARKERSIZE)
+        fig.legend([r"$L_{n,i}$", r"$L_{n,e}$"])
+        return fig
+
+    def plot_L_P(self, edge=True):
+        fig = self._plot_base(self.L.p.i, yLabel=r"$\L_{P}[m]$", edge=edge)
+        fig.scatter(self.rho, self.L.p.e, s=MARKERSIZE)
+        fig.legend([r"$L_{P,i}$", r"$L_{P,e}$"])
+        return fig
+
+    def plot_T(self, conv="eV", edge=True):
+        if conv == "eV":
+            fig = self._plot_base(self.T.i.ev, yLabel=r"$T_{i,e}[eV]$", edge=edge)
+            fig.scatter(self.rho, self.T.e.ev, s=MARKERSIZE)
+
+        if conv == "J":
+            fig = self._plot_base(self.T.i.J, yLabel=r"$T_{i,e}[J]$", edge=edge)
+            fig.scatter(self.rho, self.T.e.J, s=MARKERSIZE)
+
+        if conv=="keV":
+            fig = self._plot_base(self.T.i.kev, yLabel=r"$T_{i,e}[keV]$", edge=edge)
+            fig.scatter(self.rho, self.T.e.kev, s=MARKERSIZE)
+
         fig.legend([r"$T_i$", r"T_e"])
+        return fig
 
     def plot_n(self, edge=True):
         fig = self._plot_base(self.n.i, yLabel=r"$n_{i,e}[m^{-3}]$", edge=edge)
         fig.scatter(self.rho, self.n.e, s=MARKERSIZE)
         fig.legend([r"$n_i$", r"n_e"])
+        return fig
 
     def plot_nu(self, edge=True):
         fig = self._plot_base(self.nuij, yLabel=r"$\nu [s^{-1}]$", edge=edge)
@@ -172,8 +251,15 @@ class chi_i(PlotBase):
         fig.legend([r"$B_{\phi}$", r"$B_{\theta}$"])
         return fig
 
-    def plot_pol_gyroR(self, edge=True):
-        self._plot_base(self.gyro_rad_pol, yLabel=r"$r_{\theta}$", edge=edge)
+    def plot_pol_ion_gyroR(self, edge=True):
+        return self._plot_base(self.gyro_rad_pol, yLabel=r"$r_{L, \theta}$", edge=edge)
+
+
+    def plot_ion_gyroR(self, edge=True):
+        return self._plot_base(self.gyro_rad_ion, yLabel=r"$r_{L}$", edge=edge)
+
+    def plot_ion_speed(self, edge=True):
+        return self._plot_base(self.cs, yLabel=r"$cs$", edge=edge)
 
     def plot_itg_heaviside(self, edge=True):
         itg_crit = self._get_itg_crit()
@@ -223,19 +309,35 @@ class chi_i(PlotBase):
         fig.scatter(self.rho, neoitg, color="orange", s=MARKERSIZE)
         fig.legend([r"$\chi^{1}_{r,i}$",
                     r"$\chi^{2}_{r,i}$",
-                    r"$\chi^{4}_{r,i}$",
+                    r"$\chi^{Stacey}_{r,i}$",
                     r"$\chi^{neo}_{r,i}$",
                     r"$\chi^{itg_{TS-3/2}}_{r,i}$",
                     r"$\chi^{neo + itg_{TS-3/2}}_{r,i}$"], fontsize=16)
         return fig
 
+    def plot_chis_sep(self, edge=True):
+        fig = self._plot_base(self.shot.rtrans.chi.i.chi2, edge=edge)
+        fig.scatter(self.rho, self.shot.rtrans.chi.i.chi4, color="yellow", s=MARKERSIZE)
+        fig.scatter(self.rho, self.neo_chi, color="purple", s=MARKERSIZE)
+        fig.scatter(self.rho, self.chi_itg_TS_12, color="green", s=MARKERSIZE)
+        fig.scatter(self.rho, self.chi_DA, color="orange", s=MARKERSIZE)
+        fig.legend([r"$\chi^{2}_{r,i}$",
+                    r"$\chi^{Stacey}_{r,i}$",
+                    r"$\chi^{neo}_{r,i}$",
+                    r"$\chi^{itg_{TS-1/2}}_{r,i}$",
+                    r"$\chi^{DA}_{r,i}$"], fontsize=16)
+        return fig
+
 if __name__ == "__main__":
     import os
-    chi_i = chi_i(os.getcwd() + "/inputs/togt3_d3d_123302_2810")
-    chi_i.calc_neo_ch()
-    chi_i.calc_itg_simp()
-    chi_i.calc_itg_TS_12()
-    chi_i.calc_itg_TS_32()
-    chi_i.plot_chis_itg_TS_32()
-    chi_i.plot_chis_itg_TS_12()
+    #chi = chi_i(os.getcwd() + "/inputs/togt3_d3d_144977_3000")
+    #chi = chi_i(os.getcwd() + "/inputs/togt3_d3d_123302_2810")
+    chi = chi_i(os.getcwd() + "/inputs/togt3_d3d_123301_2800")
+    #chi = chi_i(os.getcwd() + "/inputs/togt3_d3d_170672_1900")
+    #chi = chi_i(os.getcwd() + "/inputs/togt3_d3d_164436_3720")
+    chi.plot_chis_sep(edge=True)
+    #chi_i.plot_chis_itg_TS_32()
+    #chi_i.plot_chis_itg_TS_12()
+    #chi_i.plot_chi_bohm()
+    #chi_i.plot_DA_chi()
 
