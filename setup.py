@@ -6,7 +6,8 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 deps = ['matplotlib',
         'gt3',
-        'scipy']
+        'scipy',
+        'PyQT5']
 
 setuptools.setup(
     name="GTHEAT",
