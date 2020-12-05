@@ -14,11 +14,9 @@ mu_0 = constants.mu_0
 
 class chi_i(PlotBase):
 
-    def __init__(self, inputFile):
+    def __init__(self, shot: GT3.gt3):
 
-        self.shot = GT3.gt3(inputFile=inputFile)
-        self.inp_file = inputFile
-        self.shot.run_radial_transport()
+        self.shot = shot
         self.rho = self.shot.rtrans.rhor
         self.T = self.shot.rtrans.core.T_fsa
         self.n = self.shot.rtrans.core.n_fsa
@@ -177,47 +175,47 @@ class chi_i(PlotBase):
 
         return g1, g2
 
-    def plot_chi_bohm(self, edge=True):
-        return self._plot_base(self.gyro_bohm, yLabel="$\chi^{GB}_{r,i}$", edge=edge)
+    def plot_chi_bohm(self, edge=True, show=True):
+        return self._plot_base(self.gyro_bohm, yLabel="$\chi^{GB}_{r,i}$", edge=edge, show=show)
 
-    def plot_DA_chi(self, edge=True):
-        return self._plot_base(self.chi_DA, yLabel="$\chi^{DA}_{r,i}$", edge=edge)
+    def plot_DA_chi(self, edge=True, show=True):
+        return self._plot_base(self.chi_DA, yLabel="$\chi^{DA}_{r,i}$", edge=edge, show=show)
 
-    def plot_neo_ch(self, edge=True):
-        return self._plot_base(self.neo_chi, yLabel="$\chi^{neo}_{r,i}$", edge=edge)
+    def plot_neo_ch(self, edge=True, show=True):
+        return self._plot_base(self.neo_chi, yLabel="$\chi^{neo}_{r,i}$", edge=edge, show=show)
 
-    def plot_itg_chi_simp(self, edge=True):
-        return self._plot_base(self.chi_itg_simp, yLabel=r"$\chi^{itg}_{r,i}$", edge=edge)
+    def plot_itg_chi_simp(self, edge=True, show=True):
+        return self._plot_base(self.chi_itg_simp, yLabel=r"$\chi^{itg}_{r,i}$", edge=edge, show=show)
 
-    def plot_L_T(self, edge=True):
-        fig = self._plot_base(self.L.T.i, yLabel=r"$\L_{T}[m]$", edge=edge)
+    def plot_L_T(self, edge=True, show=True):
+        fig = self._plot_base(self.L.T.i, yLabel=r"$\L_{T}[m]$", edge=edge, show=show)
         fig.scatter(self.rho, self.L.T.e, s=MARKERSIZE)
         fig.legend([r"$L_{T,i}$", r"$L_{T,e}$"])
         return fig
 
-    def plot_L_n(self, edge=True):
-        fig = self._plot_base(self.L.n.i, yLabel=r"$\L_{n}[m]$", edge=edge)
+    def plot_L_n(self, edge=True, show=True):
+        fig = self._plot_base(self.L.n.i, yLabel=r"$\L_{n}[m]$", edge=edge, show=show)
         fig.scatter(self.rho, self.L.n.e, s=MARKERSIZE)
         fig.legend([r"$L_{n,i}$", r"$L_{n,e}$"])
         return fig
 
-    def plot_L_P(self, edge=True):
-        fig = self._plot_base(self.L.p.i, yLabel=r"$\L_{P}[m]$", edge=edge)
+    def plot_L_P(self, edge=True, show=True):
+        fig = self._plot_base(self.L.p.i, yLabel=r"$\L_{P}[m]$", edge=edge, show=show)
         fig.scatter(self.rho, self.L.p.e, s=MARKERSIZE)
         fig.legend([r"$L_{P,i}$", r"$L_{P,e}$"])
         return fig
 
-    def plot_T(self, conv="eV", edge=True):
+    def plot_T(self, conv="eV", edge=True, show=True):
         if conv == "eV":
-            fig = self._plot_base(self.T.i.ev, yLabel=r"$T_{i,e}[eV]$", edge=edge)
+            fig = self._plot_base(self.T.i.ev, yLabel=r"$T_{i,e}[eV]$", edge=edge, show=show)
             fig.scatter(self.rho, self.T.e.ev, s=MARKERSIZE)
 
         elif conv == "J":
-            fig = self._plot_base(self.T.i.J, yLabel=r"$T_{i,e}[J]$", edge=edge)
+            fig = self._plot_base(self.T.i.J, yLabel=r"$T_{i,e}[J]$", edge=edge, show=show)
             fig.scatter(self.rho, self.T.e.J, s=MARKERSIZE)
 
         elif conv == "keV":
-            fig = self._plot_base(self.T.i.kev, yLabel=r"$T_{i,e}[keV]$", edge=edge)
+            fig = self._plot_base(self.T.i.kev, yLabel=r"$T_{i,e}[keV]$", edge=edge, show=show)
             fig.scatter(self.rho, self.T.e.kev, s=MARKERSIZE)
 
         else:
@@ -227,58 +225,58 @@ class chi_i(PlotBase):
         fig.legend([r"$T_i$", r"T_e"])
         return fig
 
-    def plot_n(self, edge=True):
-        fig = self._plot_base(self.n.i, yLabel=r"$n_{i,e}[m^{-3}]$", edge=edge)
+    def plot_n(self, edge=True, show=True):
+        fig = self._plot_base(self.n.i, yLabel=r"$n_{i,e}[m^{-3}]$", edge=edge, show=show)
         fig.scatter(self.rho, self.n.e, s=MARKERSIZE)
         fig.legend([r"$n_i$", r"n_e"])
         return fig
 
-    def plot_nu(self, edge=True):
-        fig = self._plot_base(self.nuij, yLabel=r"$\nu [s^{-1}]$", edge=edge)
+    def plot_nu(self, edge=True, show=True):
+        fig = self._plot_base(self.nuij, yLabel=r"$\nu [s^{-1}]$", edge=edge, show=show)
         fig.scatter(self.rho, self.nuii,  s=MARKERSIZE)
         fig.legend([r"$\nu_{i,j}$", r"$\nu_{i,i}$"])
         return fig
 
-    def plot_q(self, edge=True):
-        return self._plot_base(self.q, yLabel=r"$q$", edge=edge)
+    def plot_q(self, edge=True, show=True):
+        return self._plot_base(self.q, yLabel=r"$q$", edge=edge, show=show)
 
-    def plot_dqdr(self, edge=True):
-        return self._plot_base(self.dqdr, yLabel=r"$\frac{dq}{dr}$", edge=edge)
+    def plot_dqdr(self, edge=True, show=True):
+        return self._plot_base(self.dqdr, yLabel=r"$\frac{dq}{dr}$", edge=edge, show=show)
 
-    def plot_eps(self, edge=True):
-        return self._plot_base(self.epsilon, yLabel=r"$\epsilon$", edge=edge)
+    def plot_eps(self, edge=True, show=True):
+        return self._plot_base(self.epsilon, yLabel=r"$\epsilon$", edge=edge, show=show)
 
-    def plot_vthermal_D(self, edge=True):
-        return self._plot_base(self.vth, yLabel=r"$V_{\theta}[m/s]$", edge=edge)
+    def plot_vthermal_D(self, edge=True, show=True):
+        return self._plot_base(self.vth, yLabel=r"$V_{\theta}[m/s]$", edge=edge, show=show)
 
-    def plot_dshift(self, edge=True):
-        return self._plot_base(self.dShav_shift, yLabel=r"$\Delta'$", edge=edge)
+    def plot_dshift(self, edge=True, show=True):
+        return self._plot_base(self.dShav_shift, yLabel=r"$\Delta'$", edge=edge, show=show)
 
-    def plot_B(self, edge=True):
-        fig = self._plot_base(self.Bt, edge=edge)
+    def plot_B(self, edge=True, show=True):
+        fig = self._plot_base(self.Bt, edge=edge, show=show)
         fig.scatter(self.rho, self.Bp,  s=MARKERSIZE)
         fig.legend([r"$B_{\phi}$", r"$B_{\theta}$"])
         return fig
 
-    def plot_pol_ion_gyroR(self, edge=True):
-        return self._plot_base(self.gyro_rad_pol, yLabel=r"$r_{L, \theta}$", edge=edge)
+    def plot_pol_ion_gyroR(self, edge=True, show=True):
+        return self._plot_base(self.gyro_rad_pol, yLabel=r"$r_{L, \theta}$", edge=edge, show=show)
 
 
-    def plot_ion_gyroR(self, edge=True):
-        return self._plot_base(self.gyro_rad_ion, yLabel=r"$r_{L}$", edge=edge)
+    def plot_ion_gyroR(self, edge=True, show=True):
+        return self._plot_base(self.gyro_rad_ion, yLabel=r"$r_{L}$", edge=edge, show=show)
 
-    def plot_ion_speed(self, edge=True):
-        return self._plot_base(self.cs, yLabel=r"$cs$", edge=edge)
+    def plot_ion_speed(self, edge=True, show=True):
+        return self._plot_base(self.cs, yLabel=r"$cs$", edge=edge, show=show)
 
-    def plot_itg_heaviside(self, edge=True):
+    def plot_itg_heaviside(self, edge=True, show=True):
         itg_crit = self._get_itg_crit()
-        fig = self._plot_base((self.R / self.L.T.i), edge=edge)
+        fig = self._plot_base((self.R / self.L.T.i), edge=edge, show=show)
         fig.scatter(self.rho, itg_crit)
         return fig
 
-    def plot_chis_itg_simp(self, edge=True):
+    def plot_chis_itg_simp(self, edge=True, show=True):
         neoitg = self.neo_chi + self.chi_itg_simp
-        fig = self._plot_base(self.shot.rtrans.chi.i.chi1, edge=edge)
+        fig = self._plot_base(self.shot.rtrans.chi.i.chi1, edge=edge, show=show)
         fig.scatter(self.rho, self.shot.rtrans.chi.i.chi2, color="blue", s=MARKERSIZE)
         fig.scatter(self.rho, self.shot.rtrans.chi.i.chi4, color="yellow", s=MARKERSIZE)
         fig.scatter(self.rho, self.neo_chi, color="purple", s=MARKERSIZE)
@@ -292,9 +290,9 @@ class chi_i(PlotBase):
                     r"$\chi^{neo + itg}_{r,i}"], fontsize=20)
         return fig
 
-    def plot_chis_itg_TS_12(self, edge=True):
+    def plot_chis_itg_TS_12(self, edge=True, show=True):
         neoitg = self.neo_chi + self.chi_itg_TS_12
-        fig = self._plot_base(self.shot.rtrans.chi.i.chi1, edge=edge)
+        fig = self._plot_base(self.shot.rtrans.chi.i.chi1, edge=edge, show=show)
         fig.scatter(self.rho, self.shot.rtrans.chi.i.chi2, color="blue", s=MARKERSIZE)
         fig.scatter(self.rho, self.shot.rtrans.chi.i.chi4, color="yellow", s=MARKERSIZE)
         fig.scatter(self.rho, self.neo_chi, color="purple", s=MARKERSIZE)
@@ -308,9 +306,9 @@ class chi_i(PlotBase):
                     r"$\chi^{neo + itg_{TS-1/2}}_{r,i}$"], fontsize=16)
         return fig
 
-    def plot_chis_itg_TS_32(self, edge=True):
+    def plot_chis_itg_TS_32(self, edge=True, show=True):
         neoitg = self.neo_chi + self.chi_itg_TS_32
-        fig = self._plot_base(self.shot.rtrans.chi.i.chi1, edge=edge)
+        fig = self._plot_base(self.shot.rtrans.chi.i.chi1, edge=edge, show=show)
         fig.scatter(self.rho, self.shot.rtrans.chi.i.chi2, color="blue", s=MARKERSIZE)
         fig.scatter(self.rho, self.shot.rtrans.chi.i.chi4, color="yellow", s=MARKERSIZE)
         fig.scatter(self.rho, self.neo_chi, color="purple", s=MARKERSIZE)
@@ -324,8 +322,8 @@ class chi_i(PlotBase):
                     r"$\chi^{neo + itg_{TS-3/2}}_{r,i}$"], fontsize=16)
         return fig
 
-    def plot_chis_sep(self, edge=True):
-        fig = self._plot_base(self.shot.rtrans.chi.i.chi2, edge=edge)
+    def plot_chis_sep(self, edge=True, show=True):
+        fig = self._plot_base(self.shot.rtrans.chi.i.chi2, edge=edge, show=show)
         fig.scatter(self.rho, self.shot.rtrans.chi.i.chi4, color="yellow", s=MARKERSIZE)
         fig.scatter(self.rho, self.neo_chi, color="purple", s=MARKERSIZE)
         fig.scatter(self.rho, self.chi_itg_TS_12, color="green", s=MARKERSIZE)
@@ -337,7 +335,7 @@ class chi_i(PlotBase):
                     r"$\chi^{DA}_{r,i}$"], fontsize=16)
         return fig
 
-    def plot_chis_custom(self, edge=True, neo=True, bohm=False, itg12=False, itg32=False, DA=False):
+    def plot_chis_custom(self, edge=True, neo=True, bohm=False, itg12=False, itg32=False, DA=False, sum=False, show=True):
         """
         Plots customized Chi figure
         :param edge: Where the edge is plotted. Default: True
@@ -348,30 +346,56 @@ class chi_i(PlotBase):
         :param DA: Whether the drift-alfven chi is plotted. Default: False
         :return: The plotted Figure
         """
-        legend = [r"$\chi^{2}_{r,i}$", r"$\chi^{Stacey}_{r,i}$"]
-        fig = self._plot_base(self.shot.rtrans.chi.i.chi2, edge=edge)
-        fig.scatter(self.rho, self.shot.rtrans.chi.i.chi4, color="yellow", s=MARKERSIZE)
+        if not show:
+            yvals = np.array([0.] * len(self.rho))
+            if sum:
+                if neo:
+                    yvals += self.neo_chi
+                if bohm:
+                    yvals += self.gyro_bohm
+                if itg12:
+                    yvals += self.chi_itg_TS_12
+                if itg32:
+                    yvals += self.chi_itg_TS_32
+                if DA:
+                    yvals += self.chi_DA
+                return yvals
+            else:
+                if neo:
+                    return self.neo_chi
+                if bohm:
+                    return self.gyro_bohm
+                if itg12:
+                    return self.chi_itg_TS_12
+                if itg32:
+                    return self.chi_itg_TS_32
+                if DA:
+                    return self.chi_DA
+        else:
+            legend = [r"$\chi^{2}_{r,i}$", r"$\chi^{Stacey}_{r,i}$"]
+            fig = self._plot_base(self.shot.rtrans.chi.i.chi2, edge=edge, show=show)
+            fig.scatter(self.rho, self.shot.rtrans.chi.i.chi4, color="yellow", s=MARKERSIZE)
 
-        if neo:
-            fig.scatter(self.rho, self.neo_chi, color="purple", s=MARKERSIZE)
-            legend.append(r"$\chi^{neo}_{r,i}$")
+            if neo:
+                fig.scatter(self.rho, self.neo_chi, color="purple", s=MARKERSIZE)
+                legend.append(r"$\chi^{neo}_{r,i}$")
 
-        if bohm:
-            fig.scatter(self.rho, self.gyro_bohm, color="black", s=MARKERSIZE)
-            legend.append(r"$\chi^{GB}_{r,i}$")
+            if bohm:
+                fig.scatter(self.rho, self.gyro_bohm, color="black", s=MARKERSIZE)
+                legend.append(r"$\chi^{GB}_{r,i}$")
 
-        if itg12:
-            fig.scatter(self.rho, self.chi_itg_TS_12, color="green", s=MARKERSIZE)
-            legend.append(r"$\chi^{itg_{TS-1/2}}_{r,i}$")
+            if itg12:
+                fig.scatter(self.rho, self.chi_itg_TS_12, color="green", s=MARKERSIZE)
+                legend.append(r"$\chi^{itg_{TS-1/2}}_{r,i}$")
 
-        if itg32:
-            fig.scatter(self.rho, self.chi_itg_TS_32, color="blue", s=MARKERSIZE)
-            legend.append(r"$\chi^{itg_{TS-3/2}}_{r,i}$")
+            if itg32:
+                fig.scatter(self.rho, self.chi_itg_TS_32, color="blue", s=MARKERSIZE)
+                legend.append(r"$\chi^{itg_{TS-3/2}}_{r,i}$")
 
-        if DA:
-            fig.scatter(self.rho, self.chi_DA, color="orange", s=MARKERSIZE)
-            legend.append(r"$\chi^{DA}_{r,i}$")
+            if DA:
+                fig.scatter(self.rho, self.chi_DA, color="orange", s=MARKERSIZE)
+                legend.append(r"$\chi^{DA}_{r,i}$")
 
-        fig.legend(legend, fontsize=16)
+            fig.legend(legend, fontsize=16)
 
-        return fig
+            return fig
