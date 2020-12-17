@@ -3,10 +3,9 @@
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-from waitingspinnerwidget import QtWaitingSpinner
 import GT3
 
-from ..chi_i import chi_i
+from .chi_i import chi_i
 
 class GT3loaderDialog(QWidget):
     def __init__(self, fileName, parent=None):
@@ -20,11 +19,11 @@ class GT3loaderDialog(QWidget):
         self.shot = self.worker.shot
         self.rho = self.shot.rtrans.rhor
         self.chi_i = self.worker.chi_i
-        #self.worker.moveToThread(self.thread)  # worker will be run in another thread
-        #self.thread.started.connect(self.worker.doWork)  # Call worker.doWork when the thread starts
+        self.worker.moveToThread(self.thread)  # worker will be run in another thread
+        self.thread.started.connect(self.worker.doWork)  # Call worker.doWork when the thread starts
 
-        #self.thread.finished.emit()
-        #self.thread.quit()
+        self.thread.finished.emit()
+        self.thread.quit()
 
 
     # def start(self):

@@ -11,7 +11,7 @@ deps = ['matplotlib',
 
 setuptools.setup(
     name="GTHEAT",
-    version="0.0.1",
+    version="0.0.2",
     author="Jonathan J. Roveto",
     install_requires=deps,
     include_package_data=True,
