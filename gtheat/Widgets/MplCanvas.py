@@ -2,6 +2,7 @@
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from matplotlib.ticker import FormatStrFormatter
+import numpy as np
 
 class MplCanvas(FigureCanvasQTAgg):
 
@@ -19,7 +20,8 @@ class MplCanvas(FigureCanvasQTAgg):
         super(MplCanvas, self).__init__(self.fig)
         self.colorList = ["red", "blue", "green", "black", "purple"]
 
-    def updateFig(self, rho, yvals, legend=None, keepLims=None, xFormatter: FormatStrFormatter = None, yFormatter: FormatStrFormatter=None, color="black"):
+    def updateFig(self, rho, yvals, s=10, legend=None, keepLims=None, xFormatter: FormatStrFormatter = None,
+                  yFormatter: FormatStrFormatter=None, color="black", *args, **kwargs):
         try:
             for txt in self.fig.texts:
                 txt.set_visible(False)
@@ -32,22 +34,32 @@ class MplCanvas(FigureCanvasQTAgg):
 
         self.axes.set_xticklabels(self.axes.get_xticks(), size=8)
         self.axes.set_yticklabels(self.axes.get_yticks(), size=8)
+
         if xFormatter:
             self.axes.xaxis.set_major_formatter(xFormatter)
         else:
             self.axes.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+
         if yFormatter:
             self.axes.yaxis.set_major_formatter(yFormatter)
         else:
             self.axes.yaxis.set_major_formatter(FormatStrFormatter('%.2E'))
+
         if type(yvals) == list:
             for n, yval in enumerate(yvals):
-                self.axes.scatter(rho, yval, s=10, color=self.colorList[n])
-        else:
-            self.axes.scatter(rho, yvals, s=10, color=color)
+                self.axes.scatter(rho, yval, s=s, color=self.colorList[n])
+        elif type(yvals) == np.ndarray:
+            if kwargs.get("marker"):
+                self.axes.scatter(rho, yvals, s=s, color=color, marker=kwargs.get("marker"))
+            else:
+                self.axes.scatter(rho, yvals, s=s, color=color)
+        elif yvals == None:
+            pass
 
         if legend:
             self.fig.legend(legend, fontsize=8)
+
+
 
         # for c in fig.axes.get_children():
         #      if isinstance(c, matplotlib.collections.PathCollection):
@@ -60,8 +72,8 @@ class MplCanvas(FigureCanvasQTAgg):
         self.fig.canvas.draw()
         self.draw_idle()
 
-    def add_scatter(self, x, y, color):
-        self.axes.scatter(x, y, color=color, s=10)
+    def add_scatter(self, x, y, color, s=10, *args, **kwargs):
+        self.axes.scatter(x, y, color=color, s=s, marker=kwargs.get("marker"))
         self.fig.canvas.draw()
         self.draw_idle()
 

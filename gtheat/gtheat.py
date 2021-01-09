@@ -13,6 +13,7 @@ from Widgets.MplCanvas import MplCanvas
 from Widgets.Dialog import PreferencesDialog
 from waitingspinnerwidget import QtWaitingSpinner
 from Widgets.GTLoaderDialog import GT3loaderDialog
+from Widgets.MathTextLabel import MathTextLabel
 import GT3
 import os
 import matplotlib
@@ -33,7 +34,9 @@ class MainWindow(QMainWindow):
         self.setStatusBar(QStatusBar())
         self.statusBar().setStyleSheet("border-top: 1px solid black")
         self.settings = QSettings("GT FRC", "GTHEAT")
+        self._markerSize = 14
         self.mainGraph = MplCanvas(self, width=2, height=6, dpi=100)
+
 
 
         self._create_toolbar()
@@ -46,6 +49,8 @@ class MainWindow(QMainWindow):
         self.leftPanelLayout = QVBoxLayout()
         self.LeftPanelAndMainLayout = QHBoxLayout()
         self.axesModifierLayout = QGridLayout()
+        self.heatVisLayout = QGridLayout()
+        self.heatVisFrame = QFrame()
         self.axesModifierFrame = QFrame()
         self.checkboxFrame = QFrame()
         self.checkboxLayout = QGridLayout()
@@ -68,13 +73,15 @@ class MainWindow(QMainWindow):
         self.smallGraphsLayout.setGeometry(QRect(50, 30, 930, 20))
 
         # Set widgets
-        self.setNoDataGraphs()
+        self._setNoDataGraphs()
+        self._create_visc_modifiers()
         self._create_checkboxes()
         self._create_axis_modifiers()
         self._create_exp_checkboxes()
 
         # Add layouts
         self.checkboxAndAxesModifierLayout.addWidget(self.axesModifierFrame)
+        self.checkboxAndAxesModifierLayout.addWidget(self.heatVisFrame)
         self.checkboxAndAxesModifierLayout.addWidget(self.chiExpFrame)
         self.checkboxAndAxesModifierLayout.addWidget(self.checkboxFrame)
         self.leftPanelFrame.setLayout(self.checkboxAndAxesModifierLayout)
@@ -84,7 +91,7 @@ class MainWindow(QMainWindow):
         self.mainLayout.addLayout(self.smallGraphsLayout)
         self.mainLayout.addLayout(self.LeftPanelAndMainLayout)
 
-    def setNoDataGraphs(self):
+    def _setNoDataGraphs(self):
 
         smallHeight = 1
         smallWidth = 3
@@ -104,7 +111,7 @@ class MainWindow(QMainWindow):
         self.shotSomethingGraph = MplCanvas(self, width=smallWidth, height=smallHeight, dpi=100)
         self.smallGraphsLayout.addWidget(self.shotSomethingGraph)
 
-    def setSmallGraphs(self, shot: chi_i):
+    def _setSmallGraphs(self, shot: chi_i):
         """
 
         :param shot: The chi_i shot data
@@ -128,9 +135,14 @@ class MainWindow(QMainWindow):
             self.chi_i = self.gt3.chi_i # type: chi_i
             self.shot = self.gt3.shot # type: gt3
             self.rho = self.gt3.rho
-            self.setSmallGraphs(self.chi_i)
+            self._setSmallGraphs(self.chi_i)
             self.mainGraph.updateFig(self.rho, self.shot.rtrans.chi.i.chi4, yFormatter=FormatStrFormatter('%.1f'))
-            self.mainGraph.axes.set_xlim((0.85, 1.))
+            xAxisMin = self.XAxisMin.value()
+            xAxisMax = self.XAxisMax.value()
+            yAxisMin = self.YAxisMin.value()
+            yAxisMax = self.YAxisMax.value()
+            self.mainGraph.axes.set_xlim((xAxisMin, xAxisMax))
+            self.mainGraph.axes.set_ylim((yAxisMin, yAxisMax))
             self.setCentralWidget(self.mainWidget)
             self._enable_checkboxes(True)
             self._enable_axis_modifiers(True)
@@ -168,15 +180,30 @@ class MainWindow(QMainWindow):
         chi2 = self.chi2RadioButton.isChecked()
         chi3 = self.chi3RadioButton.isChecked()
         chi4 = self.chi4RadioButton.isChecked()
-
-        if chi1:
-            self.mainGraph.updateFig(self.rho, self.shot.rtrans.chi.i.chi1, yFormatter=FormatStrFormatter('%.1f'), keepLims=True, color="black")
-        if chi2:
-            self.mainGraph.updateFig(self.rho, self.shot.rtrans.chi.i.chi2, yFormatter=FormatStrFormatter('%.1f'), keepLims=True, color="black")
-        if chi3:
-            self.mainGraph.updateFig(self.rho, self.shot.rtrans.chi.i.chi3, yFormatter=FormatStrFormatter('%.1f'), keepLims=True, color="black")
-        if chi4:
-            self.mainGraph.updateFig(self.rho, self.shot.rtrans.chi.i.chi4, yFormatter=FormatStrFormatter('%.1f'), keepLims=True, color="black")
+        chiAll = self.chiShowAllButton.isChecked()
+        viscTor = self.heatVisTor.value()
+        viscPol = self.heatVisPol.value()
+        viscChi = self.shot.rtrans._calc_chi_i_visc(vpolS=viscPol, vtorS=viscTor)
+        s = self._markerSize
+        if chiAll:
+            self.mainGraph.updateFig(self.rho, None, color="black", keepLims=True, yFormatter=FormatStrFormatter('%.1f'))
+            self.mainGraph.add_scatter(self.rho, self.shot.rtrans.chi.i.chi1, color="red", marker="x", s=s)
+            self.mainGraph.add_scatter(self.rho, self.shot.rtrans.chi.i.chi2, color="green", marker="X", s=s)
+            self.mainGraph.add_scatter(self.rho, self.shot.rtrans.chi.i.chi3, color="blue", marker="^", s=s)
+            self.mainGraph.add_scatter(self.rho, viscChi, color="black", marker="2", s=s)
+        else:
+            if chi1:
+                self.mainGraph.updateFig(self.rho, self.shot.rtrans.chi.i.chi1, yFormatter=FormatStrFormatter('%.1f'),
+                                         keepLims=True, color="red", marker="x", s=s)
+            if chi2:
+                self.mainGraph.updateFig(self.rho, self.shot.rtrans.chi.i.chi2, yFormatter=FormatStrFormatter('%.1f'),
+                                         keepLims=True, color="green", marker="X", s=s)
+            if chi3:
+                self.mainGraph.updateFig(self.rho, self.shot.rtrans.chi.i.chi3, yFormatter=FormatStrFormatter('%.1f'),
+                                         keepLims=True, color="blue", marker="^", s=s)
+            if chi4:
+                self.mainGraph.updateFig(self.rho, viscChi, yFormatter=FormatStrFormatter('%.1f'),
+                                         keepLims=True, color="black", marker="2", s=s)
 
         if sum:
             self.mainGraph.add_scatter(self.rho, self.chi_i.plot_chis_custom(neo=neo,
@@ -188,15 +215,47 @@ class MainWindow(QMainWindow):
                                                                              show=False), color="red")
         else:
             if neo:
-                self.mainGraph.add_scatter(self.rho, self.chi_i.neo_chi, color="red")
+                self.mainGraph.add_scatter(self.rho, self.chi_i.neo_chi, color="red", s=s)
             if itg12:
-                self.mainGraph.add_scatter(self.rho, self.chi_i.chi_itg_TS_12, color="green")
+                self.mainGraph.add_scatter(self.rho, self.chi_i.chi_itg_TS_12, color="green", s=s)
             if itg32:
-                self.mainGraph.add_scatter(self.rho, self.chi_i.chi_itg_TS_32, color="purple")
+                self.mainGraph.add_scatter(self.rho, self.chi_i.chi_itg_TS_32, color="purple", s=s)
             if DA:
-                self.mainGraph.add_scatter(self.rho, self.chi_i.chi_DA, color="yellow")
+                self.mainGraph.add_scatter(self.rho, self.chi_i.chi_DA, color="yellow", s=s)
             if gyro:
-                self.mainGraph.add_scatter(self.rho, self.chi_i.gyro_bohm, color="blue")
+                self.mainGraph.add_scatter(self.rho, self.chi_i.gyro_bohm, color="blue", s=s)
+
+    def _create_visc_modifiers(self):
+
+        self.heatVisTor = QDoubleSpinBox()
+        self.heatVisPol = QDoubleSpinBox()
+
+        self.heatVisTorLabel = MathTextLabel(r"$V_{\phi}^s$", 14)
+        self.heatVisPolLabel = MathTextLabel(r"$V_{\theta}^s$", 14)
+
+        self.heatVisTor.setSingleStep(0.01)
+        self.heatVisTor.setRange(0.0, 1.0)
+        self.heatVisTor.setValue(0.1)
+
+        self.heatVisPol.setSingleStep(0.01)
+        self.heatVisPol.setRange(0.0, 1.0)
+        self.heatVisPol.setValue(0.1)
+
+        self.heatVisTor.valueChanged.connect(self.mainReplot)
+        self.heatVisPol.valueChanged.connect(self.mainReplot)
+
+
+
+        self.heatVisLayout.addWidget(self.heatVisTorLabel, 0, 0)
+        self.heatVisLayout.addWidget(self.heatVisPolLabel, 0, 1)
+        self.heatVisLayout.addWidget(self.heatVisTor, 1, 0)
+        self.heatVisLayout.addWidget(self.heatVisPol, 1, 1)
+        self.heatVisFrame.setLayout(self.heatVisLayout)
+        #self.heatVisLayout.setAlignment(Qt.AlignVCenter)
+        self.heatVisFrame.setFrameStyle(QFrame.StyledPanel)
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(15)
+        self.heatVisFrame.setGraphicsEffect(shadow)
 
     def _create_axis_modifiers(self):
 
@@ -257,6 +316,7 @@ class MainWindow(QMainWindow):
         self.chi2RadioButton.setEnabled(en)
         self.chi3RadioButton.setEnabled(en)
         self.chi4RadioButton.setEnabled(en)
+        self.chiShowAllButton.setEnabled(en)
 
     def _enable_axis_modifiers(self, en=True):
         self.XAxisMin.setEnabled(en)
@@ -312,19 +372,34 @@ class MainWindow(QMainWindow):
         self.chi2RadioButton = QRadioButton(r"$q^{cond} = Q^{tot} - Q^{conv}$")
         self.chi3RadioButton = QRadioButton(r"$q^{cond} = Q^{tot} - Q^{conv} - Q^{heatin}$")
         self.chi4RadioButton = QRadioButton(r"$q^{cond} = Q^{tot} - Q^{conv} - Q^{heatin} - Q^{visc}$")
-        self.chi4RadioButton.setChecked(True)
+        self.chiShowAllButton = QRadioButton("Show All")
+        self.chiShowAllButton.setChecked(True)
+
+        # self.chi1RadioButton = QCheckBox(r"$q^{cond} = Q^{tot}$")
+        # self.chi2RadioButton = QCheckBox(r"$q^{cond} = Q^{tot} - Q^{conv}$")
+        # self.chi3RadioButton = QCheckBox(r"$q^{cond} = Q^{tot} - Q^{conv} - Q^{heatin}$")
+        # self.chi4RadioButton = QCheckBox(r"$q^{cond} = Q^{tot} - Q^{conv} - Q^{heatin} - Q^{visc}$")
+        # self.chiShowAllButton = QCheckBox("Show All")
+
+        self.chi1RadioButton.setStyleSheet("color: red")
+        self.chi2RadioButton.setStyleSheet("color: green")
+        self.chi3RadioButton.setStyleSheet("color: blue")
+        self.chi4RadioButton.setStyleSheet("color: black")
         self._enable_exp_checkboxes(False)
+
 
         self.chi1RadioButton.toggled.connect(self.mainReplot)
         self.chi2RadioButton.toggled.connect(self.mainReplot)
         self.chi3RadioButton.toggled.connect(self.mainReplot)
         self.chi4RadioButton.toggled.connect(self.mainReplot)
+        self.chiShowAllButton.toggled.connect(self.mainReplot)
 
 
         self.chiExpLayout.addWidget(self.chi1RadioButton)
         self.chiExpLayout.addWidget(self.chi2RadioButton)
         self.chiExpLayout.addWidget(self.chi3RadioButton)
         self.chiExpLayout.addWidget(self.chi4RadioButton)
+        self.chiExpLayout.addWidget(self.chiShowAllButton)
         self.chiExpLayout.setAlignment(Qt.AlignVCenter)
 
 

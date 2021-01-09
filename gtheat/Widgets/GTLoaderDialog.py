@@ -51,14 +51,16 @@ class GT3Worker(QObject):
         try:
             self.shot.run_radial_transport()
             self.shot.rtrans
-        except:
+        except Exception as e:
             print("Radial Transport failed to load")
+            print("Error code: " + str(e))
             self.done.emit()
         try:
             self.chi_i = chi_i(self.shot)
             self.done.emit()
-        except:
+        except Exception as e:
             print("Could not load ion chi class")
+            print("Error code: " + str(e))
             self.done.emit()
 
 
