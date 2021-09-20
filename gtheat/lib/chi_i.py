@@ -6,6 +6,7 @@ import numpy as np
 from GT3.utilities.PlotBase import PlotBase
 import GT3.constants as constants
 from matplotlib.axes._axes import Axes
+from gtheat.lib.GTHOneDProfile import GTHOneDProfile
 
 e_d = constants.elementary_charge
 m_d = constants.deuteron_mass
@@ -21,50 +22,58 @@ class chi_i(PlotBase):
         self.T = self.shot.rtrans.core.T
         self.n = self.shot.rtrans.core.n
         self.p = self.shot.core.p
-        self.Zeff = self.shot.core.Z[:, 0]
-        self.nuij = self.shot.rtrans.nu_c_j_k
-        self.nuii = self.shot.rtrans.nu_c_j_j
+        self.a = self.shot.core.a
+        self.Zeff = GTHOneDProfile(self.rho, self.a, self.shot.core.Z[:, 0])
+        self.nu_ij = GTHOneDProfile(self.rho, self.a, self.shot.rtrans.nu_c_j_k)
+        self.nu_ii = GTHOneDProfile(self.rho, self.a, self.shot.rtrans.nu_c_j_j)
         self.q = self.shot.rtrans.core.q.fsa
-        self.R = self.shot.core.R[:, 0]
-        self.epsilon = self.shot.rtrans.rhor * self.shot.core.a / self.shot.core.R0_a
-        self.vth = np.sqrt(self.shot.rtrans.vpol_D**2 + self.shot.rtrans.vtor_D_total**2)
+        self.R = GTHOneDProfile(self.rho, self.a, self.shot.core.R[:, 0])
+        self.epsilon = GTHOneDProfile(self.rho, self.a, self.shot.rtrans.rhor * self.shot.core.a / self.shot.core.R0_a)
+        self.vth = GTHOneDProfile(self.rho, self.a, np.sqrt(self.shot.rtrans.vpol_D**2 + self.shot.rtrans.vtor_D_total**2))
         """Ion thermal velocity """
-        self.shav_shift = self.shot.core.shaf_shift * (1 - self.rho**2)
-        self.dShav_shift = UnivariateSpline(self.rho, self.shav_shift).derivative()(self.rho)
+        self.shav_shift = GTHOneDProfile(self.rho, self.a, self.shot.core.shaf_shift * (1 - self.rho**2))
+        self.dShav_shift = GTHOneDProfile(self.rho, self.a, UnivariateSpline(self.rho, self.shav_shift).derivative()(self.rho))
         self.B = self.shot.core.B
         self.set_plot_rho1d(self.rho)
-        self.gyro_rad_ion = self.vth  * m_d / (e_d * self.B.tor.fsa)
+        self.gyro_rad_ion = GTHOneDProfile(self.rho, self.a, self.vth * m_d / (e_d * self.B.tor.fsa))
         """Ion gyro radius"""
 
-        self.gyro_rad_pol = self.gyro_rad_ion * (self.B.pol.fsa / self.B.tor.fsa)
-        self.a = self.shot.core.a
-        self.nu_ie = self.shot.rtrans.nu_c_j_e
-        self.nu_ei = self.shot.rtrans.nu_c_e_j
-        self.nu_ee = self.shot.rtrans.nu_c_e_e
-        self.cs = np.sqrt(self.T.e.J.fsa/m_d)
+        gyro_rad_pol = self.gyro_rad_ion * (self.B.tor.fsa / self.B.pol.fsa)
+        self.gyro_rad_pol = GTHOneDProfile(self.rho, self.a, gyro_rad_pol)
+
+        self.nu_ie = GTHOneDProfile(self.rho, self.a, self.shot.rtrans.nu_c_j_e)
+        self.nu_ei = GTHOneDProfile(self.rho, self.a, self.shot.rtrans.nu_c_e_j)
+        self.nu_ee = GTHOneDProfile(self.rho, self.a, self.shot.rtrans.nu_c_e_e)
+        self.cs = GTHOneDProfile(self.rho, self.a, np.sqrt(self.T.e.J.fsa/m_d))
         """Ion sound speed"""
 
         """Do all calculations"""
-        self.itg_crit = self._get_itg_crit()
-        self.neo_chi = self.calc_neo_ch()
-        self.gyro_bohm = self.calc_gyro_bohm()
-        self.chi_itg_TS_32 = self.calc_itg_TS_32()
-        self.chi_itg_TS_12 = self.calc_itg_TS_12()
-        self.chi_itg_simp = self.calc_itg_simp()
-        self.chi_DA = self.calc_DA_chi()
+        self.itg_crit = GTHOneDProfile(self.rho, self.a, self._get_itg_crit())
+        self.neo_chi = GTHOneDProfile(self.rho, self.a, self.calc_neo_ch())
+        self.gyro_bohm = GTHOneDProfile(self.rho, self.a, self.calc_gyro_bohm())
+        self.chi_itg_TS_32 = GTHOneDProfile(self.rho, self.a, self.calc_itg_TS_32())
+        self.chi_itg_TS_12 = GTHOneDProfile(self.rho, self.a, self.calc_itg_TS_12())
+        self.chi_itg_simp = GTHOneDProfile(self.rho, self.a, self.calc_itg_simp())
+        self.chi_DA = GTHOneDProfile(self.rho, self.a, self.calc_DA_chi())
 
 
     def calc_neo_ch(self):
 
-        self.neo_a1, self.neo_a2 = self._neo_ch_get_a(self.n, self.nuij, self.q, self.R, self.epsilon, self.vth)
+        self.neo_a1, self.neo_a2 = self._neo_ch_get_a(self.n, self.nu_ij, self.q, self.R, self.epsilon, self.vth)
         self.neo_g1, self.neo_g2 = self._neo_ch_get_g(self.dShav_shift, self.epsilon)
-        return np.sqrt(self.epsilon) * self.gyro_rad_pol**2 * self.nuii * (self.neo_a1 * self.neo_g1 + self.neo_a2 * (self.neo_g1 - self.neo_g2))
+
+        # self.neo_a1, self.neo_a2, self.neo_g1, self.neo_g2 = np.zeros(len(self.rho)) + 1.,\
+        #                                                      np.zeros(len(self.rho)) + 1.,\
+        #                                                      np.zeros(len(self.rho)) + 1.,\
+        #                                                      np.zeros(len(self.rho)) + 1.
+        return np.sqrt(self.epsilon) * self.gyro_rad_pol ** 2 * self.nu_ii * \
+               (self.neo_a1 * self.neo_g1 + self.neo_a2 * (self.neo_g1 - self.neo_g2))
 
     def calc_itg_simp(self):
 
-        self.chi_itg_simp = 1.25 * np.sqrt(1 / (self.R * self.T.i.J.L.fsa)) *\
+        self.chi_itg_simp = 1.25 * np.sqrt(1 / (self.R * self.T.i.J.fsa.L)) *\
                        (self.gyro_rad_ion * self.T.e.J.fsa / (e_d * self.B.tor.fsa))\
-                       * np.heaviside((self.R / self.T.i.J.L.fsa) - self.itg_crit, 0)
+                       * np.heaviside((self.R / self.T.i.J.fsa.L) - self.itg_crit, 0)
 
         self.chi_itg_simp[self.chi_itg_simp == 0.] = np.nan
 
@@ -78,13 +87,12 @@ class chi_i(PlotBase):
         q = self.q
         Te = self.T.e.J.fsa
         ps = self.gyro_rad_ion
-        LTi = self.T.i.J.L.fsa
+        LTi = self.T.i.J.fsa.L
         R = self.R
         B = self.B.tor.fsa
 
         return Ci * q**2 * (Te / (e_d * B)) * (ps / LTi) * (R / LTi)**1.5 *\
                np.heaviside((R / LTi) - self.itg_crit, 0)
-
 
     def calc_itg_TS_12(self):
         """
@@ -96,7 +104,7 @@ class chi_i(PlotBase):
         q = self.q
         Te = self.T.e.J.fsa
         ps = self.gyro_rad_ion
-        LTi = self.T.i.J.L.fsa
+        LTi = self.T.i.J.fsa.L
         R = self.R
         B = self.B.tor.fsa
 
@@ -106,10 +114,9 @@ class chi_i(PlotBase):
     def calc_gyro_bohm(self):
 
         cs = self.cs
-        Lpi = self.p.i.L.fsa
+        Lpi = self.p.i.fsa.L
         ion_r = self.gyro_rad_ion
         return ion_r**2 * cs / Lpi
-
 
     def _get_itg_crit(self):
 
@@ -128,23 +135,21 @@ class chi_i(PlotBase):
         q = self.q
         R = self.R
         B = self.B.tor.fsa
-        Lpi = self.p.i.L.fsa
+        Lpi = self.p.i.fsa.L
         ne = self.n.e.fsa
         Te = self.T.e.J.fsa
         Ti = self.T.i.J.fsa
         lambda_e = self.vth / self.nu_ei
-        nu_n = (m_d/ m_e)**.25 * ((q * R * Lpi)**.5/lambda_e)
+        nu_n = (m_d/ m_e)**.25 * ((np.abs(q) * R * Lpi)**.5/lambda_e)
         beta = 2. * mu_0 * ne * Te / B**2
-        beta_n = (m_d / m_e)**.5 * (q * R / Lpi) * beta
-        k_parallel = 1. / (q * R)
+        beta_n = (m_d / m_e)**.5 * (np.abs(q) * R / Lpi) * beta
+        k_parallel = 1. / (np.abs(q) * R)
         mu = -1. * k_parallel * Lpi * np.sqrt((m_d * Te)/(m_e * Ti))
 
         chi_perp_db = (((1 + beta_n**2)**(-3) + nu_n**2) / (1 + beta_n**2 + nu_n**(4./3.)))**.5
         chi_gb = self.calc_gyro_bohm()
 
         return chi_gb * chi_perp_db / np.sqrt(abs(mu))
-
-
 
     def _neo_ch_get_a(self, n, nuij, q, R, eps, vthD):
         """
@@ -159,12 +164,18 @@ class chi_i(PlotBase):
         """
 
         alpha = n.C.fsa * 36. / n.i.fsa
-        mustar_i = np.abs(nuij * q * R / (eps**1.5 * vthD))
 
-        a1_numerator = 0.66 * ( 1 + 1.54 * alpha) + (1.88 * np.sqrt(eps)  - 1.54 * eps) * (1 + 3.75 * alpha)
+        mustar_i = np.abs(nuij * np.abs(q) * R / (eps**1.5 * vthD))
+        #mustar_i = np.abs(vthD * nu_ij * q * R / (eps ** 1.5))
+
+        a1_numerator = 0.66 * (1. + 1.54 * alpha) + (1.88 * np.sqrt(eps) - 1.54 * eps) * (1 + 3.75 * alpha)
         a1_denominator = 1 + 1.03 * np.sqrt(mustar_i) + 0.31 * mustar_i
 
-        a2 = (0.59 * mustar_i * eps / (1. + 0.74 * mustar_i * eps**1.5)) * (1. + (1.33 * alpha * (1. + 0.6 * alpha) / (1. + 1.79 * alpha)))
+        a2 = (0.59 * mustar_i * eps / (1. + 0.74 * mustar_i * eps**1.5)) * \
+             (1. + (1.33 * alpha * (1. + 0.6 * alpha) / (1. + 1.79 * alpha)))
+
+        self.neo_alpha = GTHOneDProfile(self.rho, self.a, alpha)
+        self.neo_mustar_i = GTHOneDProfile(self.rho, self.a, mustar_i)
         return a1_numerator / a1_denominator, a2
 
     def _neo_ch_get_g(self, dShift, eps):
@@ -187,20 +198,20 @@ class chi_i(PlotBase):
         return self._plot_base(self.chi_itg_simp, yLabel=r"$\chi^{itg}_{r,i}$", edge=edge, show=show)
 
     def plot_L_T(self, edge=True, show=True):
-        fig = self._plot_base(self.T.i.J.L.fsa, yLabel=r"$\L_{T}[m]$", edge=edge, show=show)
-        fig.scatter(self.rho, self.T.e.J.L.fsa, s=self._markerSize)
+        fig = self._plot_base(self.T.i.J.fsa.L, yLabel=r"$\L_{T}[m]$", edge=edge, show=show)
+        fig.scatter(self.rho, self.T.e.J.fsa.L, s=self._markerSize)
         fig.legend([r"$L_{T,i}$", r"$L_{T,e}$"])
         return fig
 
     def plot_L_n(self, edge=True, show=True):
-        fig = self._plot_base(self.n.i.L.fsa, yLabel=r"$\L_{n}[m]$", edge=edge, show=show)
-        fig.scatter(self.rho, self.n.e.L.fsa, s=self._markerSize)
+        fig = self._plot_base(self.n.i.fsa.L, yLabel=r"$\L_{n}[m]$", edge=edge, show=show)
+        fig.scatter(self.rho, self.n.e.fsa.L, s=self._markerSize)
         fig.legend([r"$L_{n,i}$", r"$L_{n,e}$"])
         return fig
 
     def plot_L_P(self, edge=True, show=True):
-        fig = self._plot_base(self.p.i.L.fsa, yLabel=r"$\L_{P}[m]$", edge=edge, show=show)
-        fig.scatter(self.rho, self.p.e.L.fsa, s=self._markerSize)
+        fig = self._plot_base(self.p.i.fsa.L, yLabel=r"$\L_{P}[m]$", edge=edge, show=show)
+        fig.scatter(self.rho, self.p.e.fsa.L, s=self._markerSize)
         fig.legend([r"$L_{P,i}$", r"$L_{P,e}$"])
         return fig
 
@@ -231,8 +242,8 @@ class chi_i(PlotBase):
         return fig
 
     def plot_nu(self, edge=True, show=True):
-        fig = self._plot_base(self.nuij, yLabel=r"$\nu [s^{-1}]$", edge=edge, show=show)
-        fig.scatter(self.rho, self.nuii,  s=self._markerSize)
+        fig = self._plot_base(self.nu_ij, yLabel=r"$\nu [s^{-1}]$", edge=edge, show=show)
+        fig.scatter(self.rho, self.nu_ii, s=self._markerSize)
         fig.legend([r"$\nu_{i,j}$", r"$\nu_{i,i}$"])
         return fig
 
@@ -269,7 +280,7 @@ class chi_i(PlotBase):
 
     def plot_itg_heaviside(self, edge=True, show=True):
         itg_crit = self._get_itg_crit()
-        fig = self._plot_base((self.R / self.T.i.J.L.fsa), edge=edge, show=show)
+        fig = self._plot_base((self.R / self.T.i.J.fsa.L), edge=edge, show=show)
         fig.scatter(self.rho, itg_crit)
         return fig
 
@@ -371,6 +382,33 @@ class chi_i(PlotBase):
                 if DA:
                     return self.chi_DA
         else:
+            if kwargs.get("theoryOnly"):
+
+                fig = self._plot_base(self.neo_chi, edge=edge, show=show)  # type: Axes
+                legend=[r"$\chi^{neo}_{r,i}$"]
+                fig.scatter(self.rho, self.neo_chi, color="purple", s=self._markerSize,
+                            marker="^" if kwargs.get("marker") else None)
+                fig.scatter(self.rho, self.gyro_bohm, color="black", s=self._markerSize,
+                            marker="v" if kwargs.get("marker") else None)
+                legend.append(r"$\chi^{GB}_{r,i}$")
+                fig.scatter(self.rho, self.chi_itg_TS_12, color="green", s=self._markerSize,
+                            marker="+" if kwargs.get("marker") else None)
+                legend.append(r"$\chi^{itg_{TS-1/2}}_{r,i}$")
+                fig.scatter(self.rho, self.chi_itg_TS_32, color="blue", s=self._markerSize,
+                            marker="d" if kwargs.get("marker") else None)
+                legend.append(r"$\chi^{itg_{TS-3/2}}_{r,i}$")
+                fig.scatter(self.rho, self.chi_DA, color="orange", s=self._markerSize,
+                            marker="P" if kwargs.get("marker") else None)
+                legend.append(r"$\chi^{DA}_{r,i}$")
+                fig.legend(legend, fontsize=16)
+                if kwargs.get("title"):
+                    fig.set_title("")
+                else:
+                    fig.set_title("")
+                if kwargs.get("logPlot"):
+                    fig.set_yscale("log")
+
+                return fig
 
             legend = [r"$\chi^{Corr}_{r,i}$"]
             fig = self._plot_base(self.shot.rtrans.chi.i.chi4, edge=edge, show=show) # type: Axes
@@ -415,3 +453,16 @@ class chi_i(PlotBase):
             fig.legend(legend, fontsize=16)
 
             return fig
+
+if __name__=="__main__":
+    import os
+    from GT3.Psi import UPPER_XPT, LOWER_XPT
+    kwargs = {
+        'psi_args': {
+            'debug': True,
+            'xpt_select': LOWER_XPT
+        }
+    }
+    plasma = GT3.gt3(inputFile="inputs/togt3_d3d_174783_2100", **kwargs)
+    plasma.run_radial_transport()
+    chi = chi_i(plasma)

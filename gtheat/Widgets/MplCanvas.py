@@ -3,10 +3,12 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from matplotlib.ticker import FormatStrFormatter
 import numpy as np
+from gtheat.lib.GTHOneDProfile import GTHOneDProfile
+from math import log10
 
 class MplCanvas(FigureCanvasQTAgg):
 
-    def __init__(self, parent=None, width=7, height=10, dpi=100, fig=None):
+    def __init__(self, parent=None, width=7, height=10, dpi=100, fig=None, *args, **kwargs):
         """
 
         :type fig: Figure
@@ -19,6 +21,10 @@ class MplCanvas(FigureCanvasQTAgg):
             self.noDataText = self.fig.text(0.4, 0.5, "No Data", bbox={'facecolor':'white','alpha':1,'edgecolor':'none','pad':1})
         super(MplCanvas, self).__init__(self.fig)
         self.colorList = ["red", "blue", "green", "black", "purple"]
+        if kwargs.get("logPlot"):
+            self.logPlot = True
+        else:
+            self.logPlot = False
 
     def updateFig(self, rho, yvals, s=10, legend=None, keepLims=None, xFormatter: FormatStrFormatter = None,
                   yFormatter: FormatStrFormatter=None, color="black", *args, **kwargs):
@@ -44,8 +50,12 @@ class MplCanvas(FigureCanvasQTAgg):
             self.axes.yaxis.set_major_formatter(yFormatter)
         else:
             self.axes.yaxis.set_major_formatter(FormatStrFormatter('%.2E'))
-
-        if type(yvals) == list:
+        if type(yvals) == GTHOneDProfile:
+            if kwargs.get("marker"):
+                self.axes.scatter(rho, yvals.val, s=s, color=color, marker=kwargs.get("marker"))
+            else:
+                self.axes.scatter(rho, yvals.val, s=s, color=color)
+        elif type(yvals) == list:
             for n, yval in enumerate(yvals):
                 self.axes.scatter(rho, yval, s=s, color=self.colorList[n])
         elif type(yvals) == np.ndarray:
@@ -57,8 +67,8 @@ class MplCanvas(FigureCanvasQTAgg):
             pass
 
         if legend:
-            self.fig.legend(legend, fontsize=8)
-
+            self.fig.legend(legend, fontsize=18, loc="upper right")
+            print(self.fig.bbox.bounds)
 
 
         # for c in fig.axes.get_children():
@@ -99,3 +109,14 @@ class MplCanvas(FigureCanvasQTAgg):
 
     def _saveFig(self, f):
         self.fig.savefig(f, dpi=300, format="png")
+
+    def set_title(self, title):
+        self.set_window_title(title)
+        self.fig.canvas.draw()
+        self.draw_idle()
+        
+    def set_logPlot(self, b):
+        if b:
+            self.logPlot = True
+        else:
+            self.logPlot = False
